@@ -6,7 +6,7 @@ socket.io.on("error", (error) => {
 });
 
 socket.io.on("reconnect", () => {
-    console.log("Reconnecting...");
+    console.log("Reconnection...");
 });
 
 socket.on("connect", () => {
@@ -16,4 +16,4 @@ socket.on("connect", () => {
     });
 });
 
-console.log("Client is running...");
+console.log("Le client est lancé...");
