@@ -4,10 +4,10 @@ const convert = require("xml-js");
 (async () => {
     axios({
         method: "GET",
-        url: "http://webservices-v2.crous-mobile.fr/feed/versailles/externe/resto.xml",
+        url: "https://www.data.gouv.fr/fr/datasets/r/399ff888-42bf-4cf0-a562-c0987dd27d4e",
         transformResponse: [
             data => JSON.parse(convert.xml2json(data, { compact: true, spaces: 4 }))]
-    }).then(res => console.log(res.data));
-
-    // JSON.parse(convert.xml2json(await res.text(), { compact: true, nativeType: true }))
+    }).then(({ data: { root: { restaurant: listeRestaurant } } }) => {
+        console.log(listeRestaurant)
+    });
 })();
