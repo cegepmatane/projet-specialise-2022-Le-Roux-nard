@@ -7,13 +7,13 @@ console.log("Lancement du client...");
 
     while (res?.status != 200) {
         console.log("Envoi d'une requête...");
-        await fetch("http://localhost:3015/register").then((reponseServeur) => {
+        await fetch("http://localhost:8080/register").then((reponseServeur) => {
             res = reponseServeur;
         })
     }
 
     let intervalBoucle = setInterval(() => {
-        fetch("http://localhost:3015/ping").then(async(reponseServeur) => {
+        fetch("http://localhost:8080/ping").then(async(reponseServeur) => {
             res = reponseServeur;
             if (res?.status == 200) {
                 intervalBoucle.unref();
