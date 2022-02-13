@@ -1,7 +1,6 @@
 const axios = require("axios");
-const convert = require("xml-js");
+// const convert = require("xml-js");
 
-const DATASET_URL_PREFIX = "https://www.data.gouv.fr/fr/datasets/r/";
 String.prototype.snake = function () {
     return this.escape()
         .match(/[A-Z]{2,}(?=[A-Z][a-z]+[0-9]*|\b)|[A-Z]?[a-z]+[0-9]*|[A-Z]|[0-9]+/g)
@@ -31,14 +30,18 @@ String.prototype.formatBaseDeDonnees = function () {
     return this.trim().toLowerCase().snake();
 }
 
+
+const DATASET_URL_PREFIX = "https://www.data.gouv.fr/fr/datasets/r/";
+
+const lienPourListeCrous = [
+    "https://www.data.gouv.fr/api/2/datasets/5548d35cc751df0767a7b26c/resources/?page=1&type=main&page_size=-1",
+    "https://www.data.gouv.fr/api/2/datasets/55f27f8988ee383ebda46ec1/resources/?page=1&type=main&page_size=-1",
+    "https://www.data.gouv.fr/api/2/datasets/5548d994c751df32e0a7b26c/resources/?page=1&type=main&page_size=-1"
+];
+
 async function recupererDonneesCrous() {
-    const lienPourListeCrous = [
-        "https://www.data.gouv.fr/api/2/datasets/5548d35cc751df0767a7b26c/resources/?page=1&type=main&page_size=-1",
-        "https://www.data.gouv.fr/api/2/datasets/55f27f8988ee383ebda46ec1/resources/?page=1&type=main&page_size=-1",
-        "https://www.data.gouv.fr/api/2/datasets/5548d994c751df32e0a7b26c/resources/?page=1&type=main&page_size=-1"
-    ]
-    let touteLesReponses = [];
-    let toutLesDataSets = [];
+
+    let listeCROUS = new Map();
 
     for (const lien of lienPourListeCrous) {
 
@@ -47,52 +50,25 @@ async function recupererDonneesCrous() {
                 data => JSON.parse(data)?.data]
         });
 
-        reponse = reponse.map(e => {
-            // console.log(`https://www.data.gouv.fr/fr/datasets/r/${e.id}`)
-            toutLesDataSets.push(e.id);
-            let resultat = /^(?<type>\S+).+(?:CROUS\s)(?:(?:de|d')\s?)?(?<nomCrous>.+)/gmi.exec(e.title);
-            return resultat.groups
-        })
-
-        touteLesReponses.push(reponse);
-    }
-
-    //récupère tout les types de données dont on dispose
-    touteLesReponses = touteLesReponses.flat();
-    let listeTypeDonnees = [...new Set(touteLesReponses.flat().map(e => e.type))];
-    // console.log(listeTypeDonnees);
-
-    //récupère la liste des crous (présence unique) disponible
-    let listeCrousGlobale = [...new Set(touteLesReponses.flat().map(e => e.nomCrous))];
-    listeCrousGlobale = listeCrousGlobale.map(nomCrous => { return { affichage: nomCrous, baseDeDonnees: nomCrous.formatBaseDeDonnees() } });
-
-    // console.log(listeCrousGlobale);
-    let listeCrousAvecDonnees = new Map();
-
-    for (const nomCrous of listeCrousGlobale) {
-
-        if (!listeCrousAvecDonnees.get(nomCrous.baseDeDonnees)) {
-            // console.log(touteLesReponses.filter(e => e.nomCrous.formatBaseDeDonnees() === nomCrous.baseDeDonnees));
-            let donneesDisponibles = touteLesReponses.filter(e => e.nomCrous.formatBaseDeDonnees() === nomCrous.baseDeDonnees).reduce((acc, e) => {
-                acc.push(e.type);
-                return acc;
-            }, []);
-
-            listeCrousAvecDonnees.set(nomCrous.baseDeDonnees, {
-                nomCrous: nomCrous.affichage,
-                donneesDisponibles,
-                donnees: new Map()
-            });
+        for (const ressource of reponse) {
+            let { groups: { type, nomCrous } } = /^(?<type>\S+).+(?:CROUS\s)(?:(?:de|d')\s?)?(?<nomCrous>.+)/gmi.exec(ressource.title);
+            nomCrous = { affichage: nomCrous, baseDeDonnees: nomCrous.formatBaseDeDonnees() };
+            if (!listeCROUS.get(nomCrous.baseDeDonnees)) {
+                listeCROUS.set(nomCrous.baseDeDonnees, {
+                    nomCrous: nomCrous.affichage,
+                    donneesDisponibles: new Map().set(type.formatBaseDeDonnees(), { type, id: ressource.id }),
+                    donnees: new Map()
+                });
+            } else {
+                listeCROUS.get(nomCrous.baseDeDonnees).donneesDisponibles.set(type.formatBaseDeDonnees(), { type, id: ressource.id });
+            }
         }
     }
-    console.log(listeCrousAvecDonnees);
+    return listeCROUS;
 }
 
 (async () => {
-    const allCrous = new Map();
-
-    await recupererDonneesCrous();
-
+    const allCrous = await recupererDonneesCrous();
 
     // axios({
     //     method: "GET",
