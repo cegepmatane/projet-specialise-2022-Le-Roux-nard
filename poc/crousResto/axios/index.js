@@ -1,6 +1,7 @@
 const axios = require("axios");
 const convert = require("xml-js");
 
+const DATASET_URL_PREFIX = "https://www.data.gouv.fr/fr/datasets/r/";
 String.prototype.snake = function () {
     return this.escape()
         .match(/[A-Z]{2,}(?=[A-Z][a-z]+[0-9]*|\b)|[A-Z]?[a-z]+[0-9]*|[A-Z]|[0-9]+/g)
@@ -37,17 +38,22 @@ async function recupererDonneesCrous() {
         "https://www.data.gouv.fr/api/2/datasets/5548d994c751df32e0a7b26c/resources/?page=1&type=main&page_size=-1"
     ]
     let touteLesReponses = [];
+    let toutLesDataSets = [];
 
     for (const lien of lienPourListeCrous) {
 
         let { data: reponse } = await axios({
             method: "get", url: lien, transformResponse: [
-                data => JSON.parse(data)?.data.map(e => {
-                    let resultat = /^(?<type>\S+).+(?:CROUS\s)(?:(?:de|d')\s?)?(?<nomCrous>.+)/gmi.exec(e.title);
-                    return resultat.groups
-                })
-            ]
+                data => JSON.parse(data)?.data]
         });
+
+        reponse = reponse.map(e => {
+            // console.log(`https://www.data.gouv.fr/fr/datasets/r/${e.id}`)
+            toutLesDataSets.push(e.id);
+            let resultat = /^(?<type>\S+).+(?:CROUS\s)(?:(?:de|d')\s?)?(?<nomCrous>.+)/gmi.exec(e.title);
+            return resultat.groups
+        })
+
         touteLesReponses.push(reponse);
     }
 
@@ -57,7 +63,7 @@ async function recupererDonneesCrous() {
     // console.log(listeTypeDonnees);
 
     //récupère la liste des crous (présence unique) disponible
-    let listeCrousGlobale = [...new Set(touteLesReponses.flat().map(e => e.nomCrous.formatBaseDeDonnees()))];
+    let listeCrousGlobale = [...new Set(touteLesReponses.flat().map(e => e.nomCrous))];
     listeCrousGlobale = listeCrousGlobale.map(nomCrous => { return { affichage: nomCrous, baseDeDonnees: nomCrous.formatBaseDeDonnees() } });
 
     // console.log(listeCrousGlobale);
@@ -74,7 +80,8 @@ async function recupererDonneesCrous() {
 
             listeCrousAvecDonnees.set(nomCrous.baseDeDonnees, {
                 nomCrous: nomCrous.affichage,
-                donnees: donneesDisponibles,
+                donneesDisponibles,
+                donnees: new Map()
             });
         }
     }
