@@ -68,7 +68,8 @@ async function recupererDonneesCrous() {
 }
 
 (async () => {
-    const allCrous = await recupererDonneesCrous();
+    const listeCROUS = await recupererDonneesCrous();
+    console.log(listeCROUS);
 
     // axios({
     //     method: "GET",
